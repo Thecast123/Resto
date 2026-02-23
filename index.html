@@ -1,0 +1,1792 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>RestoSync - Sistema de Gestión</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#ff6b35',
+                        secondary: '#f7931e',
+                        dark: '#1a1a2e',
+                        darker: '#16213e',
+                        accent: '#e94560',
+                        success: '#00d9ff',
+                        warning: '#ffd700'
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'slide-in': 'slideIn 0.3s ease-out',
+                        'bounce-in': 'bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+                        'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        slideIn: {
+                            '0%': { transform: 'translateX(100%)', opacity: '0' },
+                            '100%': { transform: 'translateX(0)', opacity: '1' },
+                        },
+                        bounceIn: {
+                            '0%': { transform: 'scale(0.3)', opacity: '0' },
+                            '50%': { transform: 'scale(1.05)' },
+                            '70%': { transform: 'scale(0.9)' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        },
+                        shake: {
+                            '10%, 90%': { transform: 'translate3d(-1px, 0, 0)' },
+                            '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
+                            '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
+                            '40%, 60%': { transform: 'translate3d(4px, 0, 0)' }
+                        },
+                        glow: {
+                            'from': { boxShadow: '0 0 10px #ff6b35, 0 0 20px #ff6b35' },
+                            'to': { boxShadow: '0 0 20px #f7931e, 0 0 30px #f7931e' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .glass-strong {
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .menu-item {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .menu-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(255, 107, 53, 0.3);
+        }
+        
+        .notification-badge {
+            animation: pulse 2s infinite;
+        }
+        
+        .order-card {
+            transition: all 0.3s ease;
+        }
+        
+        .order-card.new-order {
+            animation: bounceIn 0.6s ease-out;
+            border-left: 4px solid #00d9ff;
+        }
+        
+        .kitchen-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+        
+        .status-pending { border-left-color: #ffd700; }
+        .status-preparing { border-left-color: #ff6b35; }
+        .status-ready { border-left-color: #00d9ff; }
+        .status-delivered { border-left-color: #10b981; }
+        
+        .quantity-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.875rem;
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+        }
+        
+        .low-stock {
+            background: #e94560 !important;
+            animation: pulse 1s infinite;
+        }
+        
+        .sidebar-item {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .sidebar-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 3px;
+            background: linear-gradient(to bottom, #ff6b35, #f7931e);
+            transform: scaleY(0);
+            transition: transform 0.3s;
+        }
+        
+        .sidebar-item.active::before,
+        .sidebar-item:hover::before {
+            transform: scaleY(1);
+        }
+        
+        .floating-action {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 50;
+        }
+        
+        @media (max-width: 768px) {
+            .kitchen-display {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .sync-indicator {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 100;
+        }
+        
+        .sync-pulse {
+            width: 12px;
+            height: 12px;
+            background: #10b981;
+            border-radius: 50%;
+            position: relative;
+        }
+        
+        .sync-pulse::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: #10b981;
+            animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+        
+        @keyframes ping {
+            75%, 100% {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body class="text-white antialiased">
+
+    <!-- Sync Indicator -->
+    <div class="sync-indicator flex items-center gap-2 glass px-3 py-1 rounded-full">
+        <div class="sync-pulse"></div>
+        <span class="text-xs font-medium text-gray-300">Sincronizado</span>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-dark via-darker to-dark">
+        <div class="w-full max-w-md p-8 glass-strong rounded-2xl shadow-2xl animate-bounce-in">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg">
+                    <i class="fas fa-utensils text-3xl text-white"></i>
+                </div>
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">RestoSync</h1>
+                <p class="text-gray-400 mt-2">Sistema de Gestión Inteligente</p>
+            </div>
+            
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Usuario</label>
+                    <input type="text" id="loginUser" class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-primary focus:outline-none transition-colors" placeholder="usuario@restaurante" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Contraseña</label>
+                    <input type="password" id="loginPass" class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-primary focus:outline-none transition-colors" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-primary to-secondary font-semibold text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all">
+                    Iniciar Sesión
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center text-sm text-gray-500">
+                <p>Cuentas demo:</p>
+                <p class="mt-1">admin / admin | mesero1 / 1234 | cocina / 1234</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="hidden min-h-screen flex">
+        
+        <!-- Sidebar -->
+        <aside class="w-64 glass-strong hidden md:flex flex-col fixed h-full z-40">
+            <div class="p-6 border-b border-white/10">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                        <i class="fas fa-utensils text-white"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-lg">RestoSync</h2>
+                        <p class="text-xs text-gray-400" id="restaurantName">Mi Restaurante</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="flex-1 p-4 space-y-2 overflow-y-auto" id="sidebarNav">
+                <!-- Admin Only -->
+                <div id="adminMenu" class="hidden space-y-2">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 mb-2">Administración</p>
+                    <a href="#" onclick="showSection('dashboard')" class="sidebar-item active flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors">
+                        <i class="fas fa-chart-line w-5"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="#" onclick="showSection('users')" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors">
+                        <i class="fas fa-users w-5"></i>
+                        <span>Usuarios</span>
+                    </a>
+                    <a href="#" onclick="showSection('restaurants')" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors">
+                        <i class="fas fa-store w-5"></i>
+                        <span>Restaurantes</span>
+                    </a>
+                </div>
+                
+                <!-- Waiter Only -->
+                <div id="waiterMenu" class="hidden space-y-2">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 mb-2">Mesero</p>
+                    <a href="#" onclick="showSection('tables')" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors">
+                        <i class="fas fa-chair w-5"></i>
+                        <span>Mesas</span>
+                    </a>
+                    <a href="#" onclick="showSection('menu')" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors">
+                        <i class="fas fa-book-open w-5"></i>
+                        <span>Menú</span>
+                    </a>
+                    <a href="#" onclick="showSection('orders')" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors">
+                        <i class="fas fa-clipboard-list w-5"></i>
+                        <span>Mis Pedidos</span>
+                        <span id="waiterOrderCount" class="ml-auto bg-accent text-xs px-2 py-1 rounded-full hidden">0</span>
+                    </a>
+                </div>
+                
+                <!-- Kitchen Only -->
+                <div id="kitchenMenu" class="hidden space-y-2">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 mb-2">Cocina</p>
+                    <a href="#" onclick="showSection('kitchen')" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors">
+                        <i class="fas fa-fire w-5"></i>
+                        <span>Panel de Cocina</span>
+                        <span id="kitchenOrderCount" class="ml-auto bg-accent text-xs px-2 py-1 rounded-full hidden">0</span>
+                    </a>
+                    <a href="#" onclick="showSection('inventory')" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors">
+                        <i class="fas fa-boxes w-5"></i>
+                        <span>Inventario</span>
+                    </a>
+                    <a href="#" onclick="showSection('menuEditor')" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors">
+                        <i class="fas fa-edit w-5"></i>
+                        <span>Editar Menú</span>
+                    </a>
+                </div>
+            </nav>
+            
+            <div class="p-4 border-t border-white/10">
+                <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-success to-blue-500 flex items-center justify-center">
+                        <i class="fas fa-user text-white text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-sm truncate" id="currentUserName">Usuario</p>
+                        <p class="text-xs text-gray-400 capitalize" id="currentUserRole">Rol</p>
+                    </div>
+                    <button onclick="logout()" class="text-gray-400 hover:text-white transition-colors">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Header -->
+        <div class="md:hidden fixed top-0 left-0 right-0 z-30 glass-strong px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-utensils text-primary"></i>
+                <span class="font-bold">RestoSync</span>
+            </div>
+            <button onclick="toggleMobileMenu()" class="p-2 rounded-lg hover:bg-white/10">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div id="mobileMenu" class="hidden fixed inset-0 z-40 bg-black/80 backdrop-blur-sm md:hidden" onclick="toggleMobileMenu()">
+            <div class="absolute right-0 top-0 h-full w-64 glass-strong p-4" onclick="event.stopPropagation()">
+                <div class="flex justify-between items-center mb-6">
+                    <span class="font-bold">Menú</span>
+                    <button onclick="toggleMobileMenu()" class="p-2 rounded-lg hover:bg-white/10">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="mobileNavContent"></div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="flex-1 md:ml-64 p-4 md:p-8 pt-20 md:pt-8 overflow-y-auto">
+            
+            <!-- Admin Dashboard -->
+            <section id="dashboard" class="section-content space-y-6">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-3xl font-bold">Dashboard</h1>
+                    <div class="flex gap-2">
+                        <select id="restaurantSelector" class="glass px-4 py-2 rounded-lg text-sm focus:outline-none focus:border-primary">
+                            <option value="all">Todos los restaurantes</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="glass p-6 rounded-2xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                                <i class="fas fa-receipt text-primary text-xl"></i>
+                            </div>
+                            <span class="text-success text-sm font-medium">+12%</span>
+                        </div>
+                        <p class="text-gray-400 text-sm">Pedidos Hoy</p>
+                        <p class="text-2xl font-bold" id="totalOrdersToday">0</p>
+                    </div>
+                    
+                    <div class="glass p-6 rounded-2xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-secondary/20 flex items-center justify-center">
+                                <i class="fas fa-dollar-sign text-secondary text-xl"></i>
+                            </div>
+                            <span class="text-success text-sm font-medium">+8%</span>
+                        </div>
+                        <p class="text-gray-400 text-sm">Ventas Hoy</p>
+                        <p class="text-2xl font-bold" id="totalSalesToday">$0</p>
+                    </div>
+                    
+                    <div class="glass p-6 rounded-2xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center">
+                                <i class="fas fa-clock text-accent text-xl"></i>
+                            </div>
+                            <span class="text-gray-400 text-sm">Promedio</span>
+                        </div>
+                        <p class="text-gray-400 text-sm">Tiempo de Preparación</p>
+                        <p class="text-2xl font-bold" id="avgPrepTime">0 min</p>
+                    </div>
+                    
+                    <div class="glass p-6 rounded-2xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-success/20 flex items-center justify-center">
+                                <i class="fas fa-utensils text-success text-xl"></i>
+                            </div>
+                            <span class="text-warning text-sm font-medium">Activo</span>
+                        </div>
+                        <p class="text-gray-400 text-sm">Mesas Ocupadas</p>
+                        <p class="text-2xl font-bold" id="occupiedTables">0/0</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass rounded-2xl p-6">
+                        <h3 class="font-bold text-lg mb-4">Actividad en Tiempo Real</h3>
+                        <div id="activityFeed" class="space-y-3 max-h-96 overflow-y-auto">
+                            <!-- Activity items -->
+                        </div>
+                    </div>
+                    
+                    <div class="glass rounded-2xl p-6">
+                        <h3 class="font-bold text-lg mb-4">Rendimiento por Restaurante</h3>
+                        <div id="restaurantPerformance" class="space-y-4">
+                            <!-- Performance items -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- User Management -->
+            <section id="users" class="section-content hidden space-y-6">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-3xl font-bold">Gestión de Usuarios</h1>
+                    <button onclick="openUserModal()" class="px-6 py-3 bg-gradient-to-r from-primary to-secondary rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all">
+                        <i class="fas fa-plus mr-2"></i>Nuevo Usuario
+                    </button>
+                </div>
+                
+                <div class="glass rounded-2xl overflow-hidden">
+                    <table class="w-full">
+                        <thead class="bg-white/5">
+                            <tr>
+                                <th class="text-left p-4 font-semibold">Usuario</th>
+                                <th class="text-left p-4 font-semibold">Rol</th>
+                                <th class="text-left p-4 font-semibold">Restaurante</th>
+                                <th class="text-left p-4 font-semibold">Estado</th>
+                                <th class="text-left p-4 font-semibold">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTable" class="divide-y divide-white/10">
+                            <!-- Users populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Restaurant Management -->
+            <section id="restaurants" class="section-content hidden space-y-6">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-3xl font-bold">Restaurantes</h1>
+                    <button onclick="openRestaurantModal()" class="px-6 py-3 bg-gradient-to-r from-primary to-secondary rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all">
+                        <i class="fas fa-plus mr-2"></i>Nuevo Restaurante
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="restaurantsGrid">
+                    <!-- Restaurants populated here -->
+                </div>
+            </section>
+
+            <!-- Tables View (Waiter) -->
+            <section id="tables" class="section-content hidden space-y-6">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-3xl font-bold">Mesas</h1>
+                    <div class="flex gap-2">
+                        <button onclick="filterTables('all')" class="px-4 py-2 rounded-lg glass hover:bg-white/10 transition-colors text-sm">Todas</button>
+                        <button onclick="filterTables('available')" class="px-4 py-2 rounded-lg glass hover:bg-white/10 transition-colors text-sm text-success">Libres</button>
+                        <button onclick="filterTables('occupied')" class="px-4 py-2 rounded-lg glass hover:bg-white/10 transition-colors text-sm text-accent">Ocupadas</button>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4" id="tablesGrid">
+                    <!-- Tables populated here -->
+                </div>
+            </section>
+
+            <!-- Menu View (Waiter) -->
+            <section id="menu" class="section-content hidden space-y-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-bold">Menú</h1>
+                    <div class="relative">
+                        <input type="text" id="menuSearch" placeholder="Buscar platillo..." 
+                               class="pl-10 pr-4 py-2 rounded-xl glass border border-white/10 focus:border-primary focus:outline-none w-64"
+                               onkeyup="filterMenu()">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2 overflow-x-auto pb-2" id="categoryFilters">
+                    <button onclick="filterCategory('all')" class="px-4 py-2 rounded-full bg-primary text-white whitespace-nowrap">Todos</button>
+                    <!-- Categories populated here -->
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="menuGrid">
+                    <!-- Menu items populated here -->
+                </div>
+            </section>
+
+            <!-- Orders View (Waiter) -->
+            <section id="orders" class="section-content hidden space-y-6">
+                <h1 class="text-3xl font-bold mb-6">Mis Pedidos Activos</h1>
+                <div class="space-y-4" id="waiterOrdersList">
+                    <!-- Orders populated here -->
+                </div>
+            </section>
+
+            <!-- Kitchen Display -->
+            <section id="kitchen" class="section-content hidden h-full">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-bold flex items-center gap-3">
+                        <i class="fas fa-fire text-primary"></i>
+                        Panel de Cocina
+                    </h1>
+                    <div class="flex gap-4 items-center">
+                        <div class="glass px-4 py-2 rounded-lg">
+                            <span class="text-gray-400 text-sm">Pendientes: </span>
+                            <span class="font-bold text-warning" id="pendingCount">0</span>
+                        </div>
+                        <div class="glass px-4 py-2 rounded-lg">
+                            <span class="text-gray-400 text-sm">En preparación: </span>
+                            <span class="font-bold text-primary" id="preparingCount">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="kitchen-display" id="kitchenOrders">
+                    <!-- Kitchen orders populated here -->
+                </div>
+            </section>
+
+            <!-- Inventory -->
+            <section id="inventory" class="section-content hidden space-y-6">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-3xl font-bold">Inventario</h1>
+                    <button onclick="openInventoryModal()" class="px-6 py-3 bg-gradient-to-r from-primary to-secondary rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all">
+                        <i class="fas fa-plus mr-2"></i>Agregar Item
+                    </button>
+                </div>
+                
+                <div class="glass rounded-2xl overflow-hidden">
+                    <table class="w-full">
+                        <thead class="bg-white/5">
+                            <tr>
+                                <th class="text-left p-4 font-semibold">Ingrediente</th>
+                                <th class="text-left p-4 font-semibold">Cantidad</th>
+                                <th class="text-left p-4 font-semibold">Unidad</th>
+                                <th class="text-left p-4 font-semibold">Estado</th>
+                                <th class="text-left p-4 font-semibold">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTable" class="divide-y divide-white/10">
+                            <!-- Inventory populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Menu Editor -->
+            <section id="menuEditor" class="section-content hidden space-y-6">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-3xl font-bold">Editor de Menú</h1>
+                    <button onclick="openMenuItemModal()" class="px-6 py-3 bg-gradient-to-r from-primary to-secondary rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all">
+                        <i class="fas fa-plus mr-2"></i>Nuevo Platillo
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" id="menuEditorGrid">
+                    <!-- Menu editor items populated here -->
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Modals -->
+    
+    <!-- User Modal -->
+    <div id="userModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div class="glass-strong rounded-2xl p-6 w-full max-w-md animate-bounce-in">
+            <h2 class="text-2xl font-bold mb-4">Nuevo Usuario</h2>
+            <form id="userForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Nombre</label>
+                    <input type="text" id="userName" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary focus:outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Usuario</label>
+                    <input type="text" id="userUsername" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary focus:outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Contraseña</label>
+                    <input type="password" id="userPassword" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary focus:outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Rol</label>
+                    <select id="userRole" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary focus:outline-none">
+                        <option value="waiter">Mesero</option>
+                        <option value="kitchen">Cocina</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Restaurante</label>
+                    <select id="userRestaurant" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary focus:outline-none">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+                <div class="flex gap-3 mt-6">
+                    <button type="button" onclick="closeModal('userModal')" class="flex-1 py-2 rounded-lg glass hover:bg-white/10 transition-colors">Cancelar</button>
+                    <button type="submit" class="flex-1 py-2 rounded-lg bg-gradient-to-r from-primary to-secondary font-semibold">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Restaurant Modal -->
+    <div id="restaurantModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div class="glass-strong rounded-2xl p-6 w-full max-w-md animate-bounce-in">
+            <h2 class="text-2xl font-bold mb-4">Nuevo Restaurante</h2>
+            <form id="restaurantForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Nombre</label>
+                    <input type="text" id="restName" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary focus:outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Dirección</label>
+                    <input type="text" id="restAddress" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary focus:outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Teléfono</label>
+                    <input type="tel" id="restPhone" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Número de Mesas</label>
+                    <input type="number" id="restTables" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary focus:outline-none" min="1" value="10" required>
+                </div>
+                <div class="flex gap-3 mt-6">
+                    <button type="button" onclick="closeModal('restaurantModal')" class="flex-1 py-2 rounded-lg glass hover:bg-white/10 transition-colors">Cancelar</button>
+                    <button type="submit" class="flex-1 py-2 rounded-lg bg-gradient-to-r from-primary to-secondary font-semibold">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Order Modal -->
+    <div id="orderModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div class="glass-strong rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-bounce-in">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Nuevo Pedido - Mesa <span id="orderTableNum"></span></h2>
+                <button onclick="closeModal('orderModal')" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <div class="flex gap-2 overflow-x-auto pb-2 mb-4">
+                        <button onclick="filterOrderCategory('all')" class="px-3 py-1 rounded-full bg-primary text-white text-sm whitespace-nowrap">Todos</button>
+                        <div id="orderCategories" class="flex gap-2"></div>
+                    </div>
+                    <div class="space-y-2 max-h-96 overflow-y-auto" id="orderMenuList">
+                        <!-- Menu items for ordering -->
+                    </div>
+                </div>
+                
+                <div class="glass rounded-xl p-4">
+                    <h3 class="font-bold mb-3">Pedido Actual</h3>
+                    <div id="currentOrderItems" class="space-y-2 mb-4 max-h-64 overflow-y-auto">
+                        <p class="text-gray-500 text-center py-4">Agrega items al pedido</p>
+                    </div>
+                    
+                    <div class="border-t border-white/10 pt-4 space-y-2">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-400">Subtotal:</span>
+                            <span id="orderSubtotal">$0.00</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-400">IVA (16%):</span>
+                            <span id="orderTax">$0.00</span>
+                        </div>
+                        <div class="flex justify-between text-lg font-bold">
+                            <span>Total:</span>
+                            <span class="text-primary" id="orderTotal">$0.00</span>
+                        </div>
+                    </div>
+                    
+                    <button onclick="sendOrder()" class="w-full mt-4 py-3 rounded-xl bg-gradient-to-r from-primary to-secondary font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all">
+                        <i class="fas fa-paper-plane mr-2"></i>Enviar a Cocina
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menu Item Modal -->
+    <div id="menuItemModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div class="glass-strong rounded-2xl p-6 w-full max-w-md animate-bounce-in">
+            <h2 class="text-2xl font-bold mb-4">Editar Platillo</h2>
+            <form id="menuItemForm" class="space-y-4">
+                <input type="hidden" id="editItemId">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Nombre</label>
+                    <input type="text" id="editItemName" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary focus:outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Descripción</label>
+                    <textarea id="editItemDesc" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary focus:outline-none" rows="2"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-1">Precio</label>
+                        <input type="number" id="editItemPrice" step="0.01" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary focus:outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-1">Categoría</label>
+                        <input type="text" id="editItemCategory" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary focus:outline-none" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Cantidad Disponible</label>
+                    <input type="number" id="editItemStock" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary focus:outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Imagen URL</label>
+                    <input type="url" id="editItemImage" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary focus:outline-none" placeholder="https://...">
+                </div>
+                <div class="flex gap-3 mt-6">
+                    <button type="button" onclick="closeModal('menuItemModal')" class="flex-1 py-2 rounded-lg glass hover:bg-white/10 transition-colors">Cancelar</button>
+                    <button type="submit" class="flex-1 py-2 rounded-lg bg-gradient-to-r from-primary to-secondary font-semibold">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 space-y-2 pointer-events-none"></div>
+
+    <!-- Audio for notifications -->
+    <audio id="notificationSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZURE" type="audio/wav">
+    </audio>
+
+    <script>
+        // State Management
+        const state = {
+            currentUser: null,
+            users: [
+                { id: 1, name: 'Administrador', username: 'admin', password: 'admin', role: 'admin', restaurantId: null },
+                { id: 2, name: 'Carlos Mesero', username: 'mesero1', password: '1234', role: 'waiter', restaurantId: 1 },
+                { id: 3, name: 'María Cocina', username: 'cocina', password: '1234', role: 'kitchen', restaurantId: 1 }
+            ],
+            restaurants: [
+                { id: 1, name: 'Restaurante Principal', address: 'Av. Principal 123', phone: '555-0100', tables: 12 }
+            ],
+            tables: [],
+            menu: [
+                { id: 1, name: 'Hamburguesa Clásica', description: 'Carne 200g, queso cheddar, lechuga, tomate', price: 120, category: 'Hamburguesas', stock: 15, image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400' },
+                { id: 2, name: 'Pizza Pepperoni', description: 'Masa artesanal, pepperoni, queso mozzarella', price: 180, category: 'Pizzas', stock: 8, image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400' },
+                { id: 3, name: 'Tacos al Pastor', description: '5 tacos, piña, cebolla, cilantro', price: 85, category: 'Mexicana', stock: 20, image: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=400' },
+                { id: 4, name: 'Ensalada César', description: 'Lechuga romana, crutones, aderezo césar', price: 95, category: 'Ensaladas', stock: 12, image: 'https://images.unsplash.com/photo-1546793665-c74683f339c1?w=400' },
+                { id: 5, name: 'Pasta Alfredo', description: 'Fettuccine, salsa alfredo, pollo', price: 140, category: 'Pastas', stock: 10, image: 'https://images.unsplash.com/photo-1645112411341-6c3fdde7d8a5?w=400' },
+                { id: 6, name: 'Sushi Roll', description: '8 piezas, salmón, aguacate, queso', price: 160, category: 'Japonesa', stock: 6, image: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400' }
+            ],
+            orders: [],
+            inventory: [
+                { id: 1, name: 'Carne Molida', quantity: 5, unit: 'kg', minStock: 2 },
+                { id: 2, name: 'Queso Cheddar', quantity: 3, unit: 'kg', minStock: 1 },
+                { id: 3, name: 'Pan de Hamburguesa', quantity: 20, unit: 'pz', minStock: 10 },
+                { id: 4, name: 'Tomate', quantity: 8, unit: 'kg', minStock: 3 }
+            ],
+            currentOrder: [],
+            selectedTable: null
+        };
+
+        // Initialize tables
+        function initializeTables() {
+            state.tables = [];
+            state.restaurants.forEach(rest => {
+                for (let i = 1; i <= rest.tables; i++) {
+                    state.tables.push({
+                        id: `${rest.id}-${i}`,
+                        number: i,
+                        restaurantId: rest.id,
+                        status: 'available', // available, occupied, reserved
+                        orderId: null
+                    });
+                }
+            });
+        }
+
+        // Initialize
+        initializeTables();
+
+        // Auth Functions
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('loginUser').value;
+            const password = document.getElementById('loginPass').value;
+            
+            const user = state.users.find(u => u.username === username && u.password === password);
+            
+            if (user) {
+                state.currentUser = user;
+                loginSuccess();
+            } else {
+                showToast('Credenciales incorrectas', 'error');
+                document.getElementById('loginForm').classList.add('animate-shake');
+                setTimeout(() => document.getElementById('loginForm').classList.remove('animate-shake'), 500);
+            }
+        });
+
+        function loginSuccess() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            
+            // Update UI
+            document.getElementById('currentUserName').textContent = state.currentUser.name;
+            document.getElementById('currentUserRole').textContent = state.currentUser.role === 'admin' ? 'Administrador' : state.currentUser.role === 'waiter' ? 'Mesero' : 'Cocina';
+            
+            // Show appropriate menu
+            document.getElementById('adminMenu').classList.add('hidden');
+            document.getElementById('waiterMenu').classList.add('hidden');
+            document.getElementById('kitchenMenu').classList.add('hidden');
+            
+            if (state.currentUser.role === 'admin') {
+                document.getElementById('adminMenu').classList.remove('hidden');
+                showSection('dashboard');
+                updateDashboard();
+            } else if (state.currentUser.role === 'waiter') {
+                document.getElementById('waiterMenu').classList.remove('hidden');
+                showSection('tables');
+                renderTables();
+            } else if (state.currentUser.role === 'kitchen') {
+                document.getElementById('kitchenMenu').classList.remove('hidden');
+                showSection('kitchen');
+                renderKitchen();
+            }
+            
+            // Copy to mobile nav
+            document.getElementById('mobileNavContent').innerHTML = document.getElementById('sidebarNav').innerHTML;
+            
+            showToast(`Bienvenido, ${state.currentUser.name}`, 'success');
+            
+            // Start real-time simulation
+            startRealtimeSimulation();
+        }
+
+        function logout() {
+            state.currentUser = null;
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('loginForm').reset();
+        }
+
+        // Navigation
+        function showSection(sectionId) {
+            document.querySelectorAll('.section-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(sectionId).classList.remove('hidden');
+            
+            // Update sidebar active state
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+            event.target.closest('.sidebar-item')?.classList.add('active');
+            
+            // Refresh data
+            if (sectionId === 'users') renderUsers();
+            if (sectionId === 'restaurants') renderRestaurants();
+            if (sectionId === 'tables') renderTables();
+            if (sectionId === 'menu') renderMenu();
+            if (sectionId === 'orders') renderWaiterOrders();
+            if (sectionId === 'kitchen') renderKitchen();
+            if (sectionId === 'inventory') renderInventory();
+            if (sectionId === 'menuEditor') renderMenuEditor();
+            if (sectionId === 'dashboard') updateDashboard();
+        }
+
+        function toggleMobileMenu() {
+            document.getElementById('mobileMenu').classList.toggle('hidden');
+        }
+
+        // Admin Functions
+        function renderUsers() {
+            const tbody = document.getElementById('usersTable');
+            tbody.innerHTML = state.users.map(user => `
+                <tr class="hover:bg-white/5 transition-colors">
+                    <td class="p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                                <span class="font-bold text-sm">${user.name.charAt(0)}</span>
+                            </div>
+                            <div>
+                                <p class="font-medium">${user.name}</p>
+                                <p class="text-sm text-gray-400">${user.username}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        <span class="px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}">
+                            ${user.role === 'admin' ? 'Administrador' : user.role === 'waiter' ? 'Mesero' : 'Cocina'}
+                        </span>
+                    </td>
+                    <td class="p-4 text-gray-300">
+                        ${user.restaurantId ? state.restaurants.find(r => r.id === user.restaurantId)?.name || 'N/A' : 'Todos'}
+                    </td>
+                    <td class="p-4">
+                        <span class="px-3 py-1 rounded-full text-xs bg-success/20 text-success">Activo</span>
+                    </td>
+                    <td class="p-4">
+                        <button onclick="deleteUser(${user.id})" class="text-accent hover:text-red-400 transition-colors">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            
+            // Update restaurant selector in user modal
+            const select = document.getElementById('userRestaurant');
+            select.innerHTML = state.restaurants.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+        }
+
+        function getRoleColor(role) {
+            if (role === 'admin') return 'bg-purple-500/20 text-purple-400';
+            if (role === 'waiter') return 'bg-primary/20 text-primary';
+            return 'bg-secondary/20 text-secondary';
+        }
+
+        function openUserModal() {
+            document.getElementById('userModal').classList.remove('hidden');
+        }
+
+        document.getElementById('userForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const newUser = {
+                id: Date.now(),
+                name: document.getElementById('userName').value,
+                username: document.getElementById('userUsername').value,
+                password: document.getElementById('userPassword').value,
+                role: document.getElementById('userRole').value,
+                restaurantId: parseInt(document.getElementById('userRestaurant').value)
+            };
+            
+            state.users.push(newUser);
+            closeModal('userModal');
+            renderUsers();
+            showToast('Usuario creado exitosamente', 'success');
+            this.reset();
+        });
+
+        function deleteUser(id) {
+            if (confirm('¿Eliminar este usuario?')) {
+                state.users = state.users.filter(u => u.id !== id);
+                renderUsers();
+                showToast('Usuario eliminado', 'success');
+            }
+        }
+
+        function renderRestaurants() {
+            const grid = document.getElementById('restaurantsGrid');
+            grid.innerHTML = state.restaurants.map(rest => `
+                <div class="glass rounded-2xl p-6 hover:bg-white/5 transition-all cursor-pointer group">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i class="fas fa-store text-white"></i>
+                        </div>
+                        <button onclick="deleteRestaurant(${rest.id})" class="text-gray-400 hover:text-accent transition-colors">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <h3 class="font-bold text-lg mb-1">${rest.name}</h3>
+                    <p class="text-sm text-gray-400 mb-3">${rest.address}</p>
+                    <div class="flex items-center gap-4 text-sm text-gray-300">
+                        <span><i class="fas fa-phone mr-1"></i>${rest.phone}</span>
+                        <span><i class="fas fa-chair mr-1"></i>${rest.tables} mesas</span>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white/10 flex justify-between items-center">
+                        <span class="text-xs text-gray-400">ID: ${rest.id}</span>
+                        <span class="text-xs text-success">● Activo</span>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Update selector
+            const selector = document.getElementById('restaurantSelector');
+            selector.innerHTML = '<option value="all">Todos los restaurantes</option>' + 
+                state.restaurants.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+        }
+
+        function openRestaurantModal() {
+            document.getElementById('restaurantModal').classList.remove('hidden');
+        }
+
+        document.getElementById('restaurantForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const newRest = {
+                id: Date.now(),
+                name: document.getElementById('restName').value,
+                address: document.getElementById('restAddress').value,
+                phone: document.getElementById('restPhone').value,
+                tables: parseInt(document.getElementById('restTables').value)
+            };
+            
+            state.restaurants.push(newRest);
+            initializeTables(); // Reinitialize tables
+            closeModal('restaurantModal');
+            renderRestaurants();
+            showToast('Restaurante creado exitosamente', 'success');
+            this.reset();
+        });
+
+        function deleteRestaurant(id) {
+            if (confirm('¿Eliminar este restaurante?')) {
+                state.restaurants = state.restaurants.filter(r => r.id !== id);
+                renderRestaurants();
+                showToast('Restaurante eliminado', 'success');
+            }
+        }
+
+        // Waiter Functions
+        function renderTables() {
+            const grid = document.getElementById('tablesGrid');
+            const filter = window.currentTableFilter || 'all';
+            
+            let tables = state.tables;
+            if (state.currentUser.restaurantId) {
+                tables = tables.filter(t => t.restaurantId === state.currentUser.restaurantId);
+            }
+            
+            if (filter !== 'all') {
+                tables = tables.filter(t => t.status === filter);
+            }
+            
+            grid.innerHTML = tables.map(table => {
+                const statusColor = table.status === 'available' ? 'border-success/50 bg-success/10' : 
+                                  table.status === 'occupied' ? 'border-accent/50 bg-accent/10' : 'border-warning/50 bg-warning/10';
+                const statusIcon = table.status === 'available' ? 'fa-check' : 
+                                 table.status === 'occupied' ? 'fa-utensils' : 'fa-clock';
+                
+                return `
+                    <div onclick="selectTable('${table.id}')" 
+                         class="aspect-square rounded-2xl border-2 ${statusColor} flex flex-col items-center justify-center cursor-pointer hover:scale-105 transition-transform relative group">
+                        <div class="text-3xl mb-2">
+                            <i class="fas ${statusIcon}"></i>
+                        </div>
+                        <span class="font-bold text-2xl">M${table.number}</span>
+                        <span class="text-xs text-gray-400 mt-1 capitalize">${table.status}</span>
+                        
+                        ${table.status === 'occupied' ? `
+                            <div class="absolute -top-2 -right-2 w-6 h-6 bg-accent rounded-full flex items-center justify-center animate-pulse">
+                                <i class="fas fa-bell text-xs"></i>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterTables(status) {
+            window.currentTableFilter = status;
+            renderTables();
+        }
+
+        function selectTable(tableId) {
+            const table = state.tables.find(t => t.id === tableId);
+            if (table.status === 'occupied') {
+                // Show existing order
+                showToast(`Mesa ${table.number} - Ver pedido existente`, 'info');
+            } else {
+                state.selectedTable = table;
+                openOrderModal(table);
+            }
+        }
+
+        function openOrderModal(table) {
+            document.getElementById('orderTableNum').textContent = table.number;
+            document.getElementById('orderModal').classList.remove('hidden');
+            state.currentOrder = [];
+            renderOrderMenu();
+            updateOrderSummary();
+        }
+
+        function renderOrderMenu() {
+            const container = document.getElementById('orderMenuList');
+            const categories = [...new Set(state.menu.map(item => item.category))];
+            
+            // Render categories
+            document.getElementById('orderCategories').innerHTML = categories.map(cat => `
+                <button onclick="filterOrderCategory('${cat}')" class="px-3 py-1 rounded-full glass text-white text-sm whitespace-nowrap hover:bg-white/10">${cat}</button>
+            `).join('');
+            
+            renderOrderMenuItems(state.menu);
+        }
+
+        function filterOrderCategory(category) {
+            const items = category === 'all' ? state.menu : state.menu.filter(item => item.category === category);
+            renderOrderMenuItems(items);
+        }
+
+        function renderOrderMenuItems(items) {
+            const container = document.getElementById('orderMenuList');
+            container.innerHTML = items.map(item => {
+                const inOrder = state.currentOrder.find(o => o.id === item.id);
+                const quantity = inOrder ? inOrder.quantity : 0;
+                const disabled = item.stock <= 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/5';
+                
+                return `
+                    <div class="flex items-center gap-3 p-3 rounded-xl glass ${disabled} transition-all">
+                        <img src="${item.image}" class="w-16 h-16 rounded-lg object-cover" alt="${item.name}">
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-sm">${item.name}</h4>
+                            <p class="text-xs text-gray-400">$${item.price} • Stock: ${item.stock}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            ${quantity > 0 ? `
+                                <button onclick="updateOrderItem(${item.id}, -1)" class="w-8 h-8 rounded-full bg-accent/20 text-accent hover:bg-accent/30 flex items-center justify-center">
+                                    <i class="fas fa-minus text-xs"></i>
+                                </button>
+                                <span class="w-8 text-center font-bold">${quantity}</span>
+                            ` : ''}
+                            <button onclick="updateOrderItem(${item.id}, 1)" ${item.stock <= 0 ? 'disabled' : ''} 
+                                    class="w-8 h-8 rounded-full bg-primary/20 text-primary hover:bg-primary/30 flex items-center justify-center disabled:opacity-30">
+                                <i class="fas fa-plus text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateOrderItem(itemId, change) {
+            const item = state.menu.find(i => i.id === itemId);
+            const existing = state.currentOrder.find(o => o.id === itemId);
+            
+            if (existing) {
+                existing.quantity += change;
+                if (existing.quantity <= 0) {
+                    state.currentOrder = state.currentOrder.filter(o => o.id !== itemId);
+                }
+            } else if (change > 0 && item.stock > 0) {
+                state.currentOrder.push({ ...item, quantity: 1 });
+            }
+            
+            renderOrderMenuItems(state.menu);
+            updateOrderSummary();
+        }
+
+        function updateOrderSummary() {
+            const container = document.getElementById('currentOrderItems');
+            
+            if (state.currentOrder.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">Agrega items al pedido</p>';
+                document.getElementById('orderSubtotal').textContent = '$0.00';
+                document.getElementById('orderTax').textContent = '$0.00';
+                document.getElementById('orderTotal').textContent = '$0.00';
+                return;
+            }
+            
+            container.innerHTML = state.currentOrder.map(item => `
+                <div class="flex justify-between items-center p-2 rounded-lg bg-white/5">
+                    <div>
+                        <p class="font-medium text-sm">${item.name}</p>
+                        <p class="text-xs text-gray-400">${item.quantity} x $${item.price}</p>
+                    </div>
+                    <span class="font-bold">$${(item.quantity * item.price).toFixed(2)}</span>
+                </div>
+            `).join('');
+            
+            const subtotal = state.currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const tax = subtotal * 0.16;
+            const total = subtotal + tax;
+            
+            document.getElementById('orderSubtotal').textContent = `$${subtotal.toFixed(2)}`;
+            document.getElementById('orderTax').textContent = `$${tax.toFixed(2)}`;
+            document.getElementById('orderTotal').textContent = `$${total.toFixed(2)}`;
+        }
+
+        function sendOrder() {
+            if (state.currentOrder.length === 0) {
+                showToast('Agrega items al pedido', 'error');
+                return;
+            }
+            
+            const order = {
+                id: Date.now(),
+                tableId: state.selectedTable.id,
+                tableNumber: state.selectedTable.number,
+                items: [...state.currentOrder],
+                status: 'pending',
+                timestamp: new Date(),
+                waiterId: state.currentUser.id,
+                waiterName: state.currentUser.name,
+                total: state.currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0) * 1.16
+            };
+            
+            state.orders.push(order);
+            
+            // Update table status
+            const table = state.tables.find(t => t.id === state.selectedTable.id);
+            table.status = 'occupied';
+            table.orderId = order.id;
+            
+            // Update stock
+            state.currentOrder.forEach(orderItem => {
+                const menuItem = state.menu.find(m => m.id === orderItem.id);
+                if (menuItem) menuItem.stock -= orderItem.quantity;
+            });
+            
+            // Simulate kitchen notification
+            setTimeout(() => {
+                showToast('¡Nuevo pedido en cocina!', 'warning', 3000);
+                playNotificationSound();
+                if (state.currentUser.role === 'kitchen') {
+                    renderKitchen();
+                }
+            }, 500);
+            
+            closeModal('orderModal');
+            renderTables();
+            showToast('Pedido enviado a cocina', 'success');
+            
+            // Update counts
+            updateOrderCounts();
+        }
+
+        function renderWaiterOrders() {
+            const container = document.getElementById('waiterOrdersList');
+            const myOrders = state.orders.filter(o => o.waiterId === state.currentUser.id && o.status !== 'delivered');
+            
+            if (myOrders.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-400 py-8">No tienes pedidos activos</p>';
+                return;
+            }
+            
+            container.innerHTML = myOrders.map(order => {
+                const statusColors = {
+                    pending: 'border-warning text-warning',
+                    preparing: 'border-primary text-primary',
+                    ready: 'border-success text-success'
+                };
+                
+                return `
+                    <div class="glass rounded-2xl p-6 border-l-4 ${statusColors[order.status]}">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="font-bold text-lg">Mesa ${order.tableNumber}</h3>
+                                <p class="text-sm text-gray-400">${new Date(order.timestamp).toLocaleTimeString()}</p>
+                            </div>
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-white/10 capitalize">
+                                ${order.status === 'pending' ? 'Pendiente' : order.status === 'preparing' ? 'En preparación' : 'Listo'}
+                            </span>
+                        </div>
+                        
+                        <div class="space-y-2 mb-4">
+                            ${order.items.map(item => `
+                                <div class="flex justify-between text-sm">
+                                    <span>${item.quantity}x ${item.name}</span>
+                                    <span class="text-gray-400">$${(item.price * item.quantity).toFixed(2)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="flex justify-between items-center pt-4 border-t border-white/10">
+                            <span class="font-bold text-lg">Total: $${order.total.toFixed(2)}</span>
+                            ${order.status === 'ready' ? `
+                                <button onclick="deliverOrder(${order.id})" class="px-4 py-2 rounded-lg bg-success text-white font-semibold hover:bg-green-600 transition-colors">
+                                    Entregar
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function deliverOrder(orderId) {
+            const order = state.orders.find(o => o.id === orderId);
+            order.status = 'delivered';
+            
+            const table = state.tables.find(t => t.id === order.tableId);
+            table.status = 'available';
+            table.orderId = null;
+            
+            renderWaiterOrders();
+            showToast('Pedido entregado', 'success');
+            updateOrderCounts();
+        }
+
+        // Kitchen Functions
+        function renderKitchen() {
+            const container = document.getElementById('kitchenOrders');
+            const pending = state.orders.filter(o => o.status === 'pending');
+            const preparing = state.orders.filter(o => o.status === 'preparing');
+            
+            document.getElementById('pendingCount').textContent = pending.length;
+            document.getElementById('preparingCount').textContent = preparing.length;
+            
+            const activeOrders = [...pending, ...preparing].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            
+            if (activeOrders.length === 0) {
+                container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-400"><i class="fas fa-coffee text-4xl mb-4"></i><p>No hay pedidos pendientes</p></div>';
+                return;
+            }
+            
+            container.innerHTML = activeOrders.map(order => {
+                const isNew = (Date.now() - order.timestamp) < 5000;
+                const elapsed = Math.floor((Date.now() - order.timestamp) / 1000 / 60);
+                
+                return `
+                    <div class="glass rounded-2xl p-6 order-card ${order.status} ${isNew ? 'new-order' : ''} relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-2">
+                            <span class="text-2xl font-bold text-white/20">${elapsed}m</span>
+                        </div>
+                        
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="font-bold text-2xl mb-1">Mesa ${order.tableNumber}</h3>
+                                <p class="text-sm text-gray-400">Mesero: ${order.waiterName}</p>
+                                <p class="text-xs text-gray-500">${new Date(order.timestamp).toLocaleTimeString()}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-3 mb-6">
+                            ${order.items.map(item => `
+                                <div class="flex items-center gap-3 p-3 rounded-lg bg-white/5">
+                                    <span class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">${item.quantity}</span>
+                                    <span class="font-medium">${item.name}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="flex gap-2">
+                            ${order.status === 'pending' ? `
+                                <button onclick="updateOrderStatus(${order.id}, 'preparing')" class="flex-1 py-3 rounded-xl bg-primary hover:bg-orange-600 text-white font-semibold transition-colors">
+                                    <i class="fas fa-fire mr-2"></i>Preparar
+                                </button>
+                            ` : `
+                                <button onclick="updateOrderStatus(${order.id}, 'ready')" class="flex-1 py-3 rounded-xl bg-success hover:bg-green-600 text-white font-semibold transition-colors">
+                                    <i class="fas fa-check mr-2"></i>Listo
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateOrderStatus(orderId, status) {
+            const order = state.orders.find(o => o.id === orderId);
+            order.status = status;
+            
+            if (status === 'ready') {
+                // Notify waiter
+                showToast(`¡Pedido Mesa ${order.tableNumber} listo!`, 'success', 3000);
+                playNotificationSound();
+            }
+            
+            renderKitchen();
+            updateOrderCounts();
+        }
+
+        // Inventory Functions
+        function renderInventory() {
+            const tbody = document.getElementById('inventoryTable');
+            tbody.innerHTML = state.inventory.map(item => {
+                const isLow = item.quantity <= item.minStock;
+                return `
+                    <tr class="hover:bg-white/5 transition-colors ${isLow ? 'bg-accent/10' : ''}">
+                        <td class="p-4 font-medium">${item.name}</td>
+                        <td class="p-4">
+                            <input type="number" value="${item.quantity}" 
+                                   onchange="updateInventory(${item.id}, this.value)"
+                                   class="w-20 px-2 py-1 rounded bg-white/5 border border-white/10 text-center ${isLow ? 'text-accent border-accent' : ''}">
+                        </td>
+                        <td class="p-4 text-gray-400">${item.unit}</td>
+                        <td class="p-4">
+                            ${isLow ? '<span class="px-2 py-1 rounded-full text-xs bg-accent/20 text-accent font-bold animate-pulse">Bajo Stock</span>' : '<span class="px-2 py-1 rounded-full text-xs bg-success/20 text-success">OK</span>'}
+                        </td>
+                        <td class="p-4">
+                            <button onclick="deleteInventoryItem(${item.id})" class="text-gray-400 hover:text-accent transition-colors">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateInventory(itemId, quantity) {
+            const item = state.inventory.find(i => i.id === itemId);
+            item.quantity = parseFloat(quantity);
+            renderInventory();
+            
+            // Check if this affects menu items
+            checkMenuStock();
+        }
+
+        function checkMenuStock() {
+            // Simulate checking ingredients against menu items
+            state.menu.forEach(item => {
+                if (item.stock <= 3) {
+                    showToast(`Stock bajo: ${item.name}`, 'warning');
+                }
+            });
+        }
+
+        function openInventoryModal() {
+            // Simple prompt for demo
+            const name = prompt('Nombre del ingrediente:');
+            if (name) {
+                const unit = prompt('Unidad (kg, pz, etc):') || 'pz';
+                const qty = parseFloat(prompt('Cantidad:')) || 0;
+                state.inventory.push({
+                    id: Date.now(),
+                    name,
+                    quantity: qty,
+                    unit,
+                    minStock: 5
+                });
+                renderInventory();
+                showToast('Item agregado al inventario', 'success');
+            }
+        }
+
+        function deleteInventoryItem(id) {
+            state.inventory = state.inventory.filter(i => i.id !== id);
+            renderInventory();
+        }
+
+        // Menu Editor Functions
+        function renderMenuEditor() {
+            const grid = document.getElementById('menuEditorGrid');
+            grid.innerHTML = state.menu.map(item => `
+                <div class="glass rounded-2xl overflow-hidden group hover:shadow-2xl transition-all">
+                    <div class="relative h-48 overflow-hidden">
+                        <img src="${item.image}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="${item.name}">
+                        <div class="absolute top-2 right-2">
+                            <span class="quantity-badge ${item.stock <= 5 ? 'low-stock' : ''}">${item.stock}</span>
+                        </div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-dark to-transparent opacity-60"></div>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h3 class="font-bold text-lg">${item.name}</h3>
+                                <p class="text-sm text-gray-400">${item.category}</p>
+                            </div>
+                            <span class="text-xl font-bold text-primary">$${item.price}</span>
+                        </div>
+                        <p class="text-sm text-gray-300 mb-4 line-clamp-2">${item.description}</p>
+                        
+                        <div class="flex gap-2">
+                            <button onclick="editMenuItem(${item.id})" class="flex-1 py-2 rounded-lg glass hover:bg-white/10 transition-colors text-sm">
+                                <i class="fas fa-edit mr-1"></i>Editar
+                            </button>
+                            <button onclick="adjustStock(${item.id}, 1)" class="px-3 py-2 rounded-lg bg-success/20 text-success hover:bg-success/30 transition-colors">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button onclick="adjustStock(${item.id}, -1)" class="px-3 py-2 rounded-lg bg-accent/20 text-accent hover:bg-accent/30 transition-colors">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function editMenuItem(itemId) {
+            const item = state.menu.find(i => i.id === itemId);
+            document.getElementById('editItemId').value = item.id;
+            document.getElementById('editItemName').value = item.name;
+            document.getElementById('editItemDesc').value = item.description;
+            document.getElementById('editItemPrice').value = item.price;
+            document.getElementById('editItemCategory').value = item.category;
+            document.getElementById('editItemStock').value = item.stock;
+            document.getElementById('editItemImage').value = item.image;
+            
+            document.getElementById('menuItemModal').classList.remove('hidden');
+        }
+
+        document.getElementById('menuItemForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = parseInt(document.getElementById('editItemId').value) || Date.now();
+            const existing = state.menu.find(i => i.id === id);
+            
+            const itemData = {
+                id,
+                name: document.getElementById('editItemName').value,
+                description: document.getElementById('editItemDesc').value,
+                price: parseFloat(document.getElementById('editItemPrice').value),
+                category: document.getElementById('editItemCategory').value,
+                stock: parseInt(document.getElementById('editItemStock').value),
+                image: document.getElementById('editItemImage').value || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'
+            };
+            
+            if (existing) {
+                Object.assign(existing, itemData);
+                showToast('Platillo actualizado', 'success');
+            } else {
+                state.menu.push(itemData);
+                showToast('Platillo creado', 'success');
+            }
+            
+            closeModal('menuItemModal');
+            renderMenuEditor();
+            this.reset();
+        });
+
+        function adjustStock(itemId, change) {
+            const item = state.menu.find(i => i.id === itemId);
+            item.stock = Math.max(0, item.stock + change);
+            renderMenuEditor();
+            
+            // Real-time sync simulation
+            setTimeout(() => {
+                showToast(`Stock actualizado: ${item.name} (${item.stock})`, 'info');
+            }, 300);
+        }
+
+        function openMenuItemModal() {
+            document.getElementById('menuItemForm').reset();
+            document.getElementById('editItemId').value = '';
+            document.getElementById('menuItemModal').classList.remove('hidden');
+        }
+
+        // Menu View (Waiter)
+        function renderMenu() {
+            const grid = document.getElementById('menuGrid');
+            const categories = [...new Set(state.menu.map(item => item.category))];
+            
+            document.getElementById('categoryFilters').innerHTML = 
+                `<button onclick="filterCategory('all')" class="px-4 py-2 rounded-full bg-primary text-white whitespace-nowrap">Todos</button>` +
+                categories.map(cat => `
+                    <button onclick="filterCategory('${cat}')" class="px-4 py-2 rounded-full glass text-white whitespace-nowrap hover:bg-white/10">${cat}</button>
+                `).join('');
+            
+            grid.innerHTML = state.menu.map(item => `
+                <div class="glass rounded-2xl overflow-hidden menu-item relative ${item.stock <= 0 ? 'opacity-50' : ''}">
+                    <div class="relative h-48">
+                        <img src="${item.image}" class="w-full h-full object-cover" alt="${item.name}">
+                        ${item.stock <= 5 && item.stock > 0 ? '<div class="absolute top-2 right-2 px-3 py-1 rounded-full bg-accent text-white text-xs font-bold animate-pulse">¡Últimos!</div>' : ''}
+                        ${item.stock <= 0 ? '<div class="absolute inset-0 bg-black/70 flex items-center justify-center"><span class="text-2xl font-bold text-accent">AGOTADO</span></div>' : ''}
+                    </div>
+                    <div class="p-4">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-lg">${item.name}</h3>
+                            <span class="text-xl font-bold text-primary">$${item.price}</span>
+                        </div>
+                        <p class="text-sm text-gray-400 mb-3">${item.description}</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs px-2 py-1 rounded-full bg-white/10">${item.category}</span>
+                            <span class="text-sm ${item.stock <= 5 ? 'text-accent' : 'text-success'} font-semibold">
+                                ${item.stock > 0 ? `${item.stock} disponibles` : 'Agotado'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterCategory(category) {
+            const items = category === 'all' ? state.menu : state.menu.filter(item => item.category === category);
+            const grid = document.getElementById('menuGrid');
+            
+            grid.innerHTML = items.map(item => `
+                <div class="glass rounded-2xl overflow-hidden menu-item relative ${item.stock <= 0 ? 'opacity-50' : ''}">
+                    <div class="relative h-48">
+                        <img src="${item.image}" class="w-full h-full object-cover" alt="${item.name}">
+                        ${item.stock <= 5 && item.stock > 0 ? '<div class="absolute top-2 right-2 px-3 py-1 rounded-full bg-accent text-white text-xs font-bold animate-pulse">¡Últimos!</div>' : ''}
+                        ${item.stock <= 0 ? '<div class="absolute inset-0 bg-black/70 flex items-center justify-center"><span class="text-2xl font-bold text-accent">AGOTADO</span></div>' : ''}
+                    </div>
+                    <div class="p-4">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-lg">${item.name}</h3>
+                            <span class="text-xl font-bold text-primary">$${item.price}</span>
+                        </div>
+                        <p class="text-sm text-gray-400 mb-3">${item.description}</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs px-2 py-1 rounded-full bg-white/10">${item.category}</span>
+                            <span class="text-sm ${item.stock <= 5 ? 'text-accent' : 'text-success'} font-semibold">
+                                ${item.stock > 0 ? `${item.stock} disponibles` : 'Agotado'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterMenu() {
+            const search = document.getElementById('menuSearch').value.toLowerCase();
+            const items = state.menu.filter(item => 
+                item.name.toLowerCase().includes(search) || 
+                item.category.toLowerCase().includes(search)
+            );
+            
+            const grid = document.getElementById('menuGrid');
+            grid.innerHTML = items.map(item => `
+                <div class="glass rounded-2xl overflow-hidden menu-item relative ${item.stock <= 0 ? 'opacity-50' : ''}">
+                    <div class="relative h-48">
+                        <img src="${item.image}" class="w-full h-full object-cover" alt="${item.name}">
+                        ${item.stock <= 5 && item.stock > 0 ? '<div class="absolute top-2 right-2 px-3 py-1 rounded-full bg-accent text-white text-xs font-bold animate-pulse">¡Últimos!</div>' : ''}
+                        ${item.stock <= 0 ? '<div class="absolute inset-0 bg-black/70 flex items-center justify-center"><span class="text-2xl font-bold text-accent">AGOTADO</span></div>' : ''}
+                    </div>
+                    <div class="p-4">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-lg">${item.name}</h3>
+                            <span class="text-xl font-bold text-primary">$${item.price}</span>
+                        </div>
+                        <p class="text-sm text-gray-400 mb-3">${item.description}</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs px-2 py-1 rounded-full bg-white/10">${item.category}</span>
+                            <span class="text-sm ${item.stock <= 5 ? 'text-accent' : 'text-success'} font-semibold">
+                                ${item.stock > 0 ? `${item.stock} disponibles` : 'Agotado'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Dashboard Functions
+        function updateDashboard() {
+            // Calculate stats
+            const today = new Date().toDateString();
+            const todayOrders = state.orders.filter(o => new Date(o.timestamp).toDateString() === today);
+            
+            document.getElementById('totalOrdersToday').textContent = todayOrders.length;
+            document.getElementById('totalSalesToday').textContent = '$' + todayOrders.reduce((sum, o) => sum + o.total, 0).toFixed(0);
+            
+            const occupied = state.tables.filter(t => t.status === 'occupied').length;
+            document.getElementById('occupiedTables').textContent = `${occupied}/${state.tables.length}`;
+            
+            // Activity feed
+            const feed = document.getElementById('activityFeed');
+            const recentOrders = [...state.orders].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
+            
+            feed.innerHTML = recentOrders.map(order => `
+                <div class="flex items-center gap-3 p-3 rounded-xl glass hover:bg-white/5 transition-colors animate-slide-in">
+                    <div class="w-10 h-10 rounded-full ${order.status === 'delivered' ? 'bg-success/20 text-success' : 'bg-primary/20 text-primary'} flex items-center justify-center">
+                        <i class="fas ${order.status === 'delivered' ? 'fa-check' : 'fa-utensils'}"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-sm">Pedido Mesa ${order.tableNumber} - ${order.status === 'delivered' ? 'Entregado' : 'En proceso'}</p>
+                        <p class="text-xs text-gray-400">${order.waiterName} • ${new Date(order.timestamp).toLocaleTimeString()}</p>
+                    </div>
+                    <span class="font-bold text-primary">$${order.total.toFixed(0)}</span>
+                </div>
+            `).join('');
+            
+            // Performance
+            const perf = document.getElementById('restaurantPerformance');
+            perf.innerHTML = state.restaurants.map(rest => {
+                const restOrders = state.orders.filter(o => {
+                    const table = state.tables.find(t => t.id === o.tableId);
+                    return table && table.restaurantId === rest.id;
+                });
+                const sales = restOrders.reduce((sum, o) => sum + o.total, 0);
+                
+                return `
+                    <div class="flex items-center justify-between p-4 rounded-xl glass">
+                        <div>
+                            <h4 class="font-semibold">${rest.name}</h4>
+                            <p class="text-sm text-gray-400">${restOrders.length} pedidos hoy</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xl font-bold text-primary">$${sales.toFixed(0)}</p>
+                            <div class="w-32 h-2 rounded-full bg-white/10 mt-2 overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-primary to-secondary rounded-full" style="width: ${Math.min(100, (sales / 1000) * 100)}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Utilities
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function showToast(message, type = 'info', duration = 3000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const colors = {
+                success: 'bg-success/20 border-success text-success',
+                error: 'bg-accent/20 border-accent text-accent',
+                warning: 'bg-warning/20 border-warning text-warning',
+                info: 'bg-primary/20 border-primary text-primary'
+            };
+            
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info-circle'
+            };
+            
+            toast.className = `glass px-6 py-4 rounded-xl border-l-4 ${colors[type]} flex items-center gap-3 shadow-2xl animate-slide-in pointer-events-auto min-w-[300px]`;
+            toast.innerHTML = `
+                <i class="fas ${icons[type]} text-xl"></i>
+                <span class="font-medium">${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        function playNotificationSound() {
+            const audio = document.getElementById('notificationSound');
+            audio.play().catch(e => console.log('Audio play failed:', e));
+        }
+
+        function updateOrderCounts() {
+            const pending = state.orders.filter(o => o.status === 'pending').length;
+            const preparing = state.orders.filter(o => o.status === 'preparing').length;
+            const ready = state.orders.filter(o => o.status === 'ready').length;
+            
+            const kitchenCount = document.getElementById('kitchenOrderCount');
+            const waiterCount = document.getElementById('waiterOrderCount');
+            
+            if (kitchenCount) {
+                const total = pending + preparing;
+                kitchenCount.textContent = total;
+                kitchenCount.classList.toggle('hidden', total === 0);
+            }
+            
+            if (waiterCount) {
+                waiterCount.textContent = ready;
+                waiterCount.classList.toggle('hidden', ready === 0);
+            }
+        }
+
+        // Real-time simulation
+        function startRealtimeSimulation() {
+            // Simulate incoming orders
+            setInterval(() => {
+                if (Math.random() > 0.95 && state.currentUser?.role === 'kitchen') {
+                    // Simulate new order from another waiter
+                    showToast('¡Nuevo pedido recibido!', 'warning', 4000);
+                    playNotificationSound();
+                    
+                    // Add visual indicator
+                    document.querySelector('.sync-pulse').style.background = '#ffd700';
+                    setTimeout(() => {
+                        document.querySelector('.sync-pulse').style.background = '#10b981';
+                    }, 1000);
+                }
+            }, 5000);
+            
+            // Update kitchen timer
+            if (state.currentUser?.role === 'kitchen') {
+                setInterval(() => {
+                    renderKitchen();
+                }, 30000); // Update every 30 seconds
+            }
+        }
+
+        // Close modals on outside click
+        window.onclick = function(event) {
+            if (event.target.classList.contains('fixed')) {
+                event.target.classList.add('hidden');
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.fixed').forEach(el => {
+                    if (!el.id.includes('login')) el.classList.add('hidden');
+                });
+            }
+        });
+    </script>
+</body>
+</html>
